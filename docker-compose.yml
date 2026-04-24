@@ -1,0 +1,13 @@
+services:
+  taskmanager:
+    build: .
+    container_name: server-taskmanager
+    ports:
+      - "8080:8080"
+    pid: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin

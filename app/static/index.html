@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Task Manager</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="logo">&#9881;</span>
+    <span class="title">Server Task Manager</span>
+  </div>
+  <div class="header-center">
+    <span id="hostname">—</span>
+  </div>
+  <div class="header-right">
+    <span id="uptime">—</span>
+    <span id="clock">—</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="processes">Processes</button>
+  <button class="tab-btn" data-tab="services">Services</button>
+  <button class="tab-btn" data-tab="startup">Startup</button>
+</nav>
+
+<main>
+
+  <!-- OVERVIEW -->
+  <div id="overview" class="tab-pane active">
+    <div class="grid-2x2">
+
+      <div class="card">
+        <div class="card-header">
+          <h2>CPU</h2>
+          <span id="cpu-percent" class="big-number">—</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="cpu-chart"></canvas>
+        </div>
+        <div class="card-footer">
+          <span id="cpu-cores">—</span>
+          <span id="cpu-freq">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Memory</h2>
+          <span id="mem-percent" class="big-number">—</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span>RAM</span>
+            <span><span id="mem-used">—</span> / <span id="mem-total">—</span></span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="mem-bar" class="progress-bar" style="width:0%"></div>
+          </div>
+          <div id="swap-row" style="display:none">
+            <div class="metric-row" style="margin-top:14px">
+              <span>Swap <span id="swap-percent" class="muted" style="font-size:12px"></span></span>
+              <span><span id="swap-used">—</span> / <span id="swap-total">—</span></span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="swap-bar" class="progress-bar" style="width:0%;background:#9c27b0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Disk</h2>
+        </div>
+        <div id="disk-list" class="card-body" style="overflow-y:auto"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Network</h2>
+          <div class="net-speeds">
+            <span class="upload">&#8593; <span id="net-send-speed">—</span></span>
+            <span class="download">&#8595; <span id="net-recv-speed">—</span></span>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="net-chart"></canvas>
+        </div>
+        <div class="card-footer">
+          <span>Sent: <span id="net-total-sent">—</span></span>
+          <span>Recv: <span id="net-total-recv">—</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PROCESSES -->
+  <div id="processes" class="tab-pane">
+    <div class="toolbar">
+      <input type="text" id="proc-search" class="search-input" placeholder="Search by name, user, or PID…">
+      <span id="proc-count" class="muted"></span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="pid">PID</th>
+            <th class="sortable" data-key="name">Name</th>
+            <th class="sortable" data-key="username">User</th>
+            <th class="sortable sort-desc" data-key="cpu_percent">CPU %</th>
+            <th class="sortable" data-key="memory_percent">Mem %</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="proc-tbody">
+          <tr><td colspan="6" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <div id="services" class="tab-pane">
+    <div id="services-error" class="error-banner" style="display:none"></div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Image</th>
+            <th>Ports</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="containers-tbody">
+          <tr><td colspan="7" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STARTUP -->
+  <div id="startup" class="tab-pane">
+    <div class="table-container" style="flex:0 1 auto;max-height:55%">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Command</th>
+            <th>Description</th>
+            <th>Enabled</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="startup-list">
+          <tr><td colspan="5" class="empty">No startup items configured yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px;flex-shrink:0">
+      <div class="card-header">
+        <h2>Add Startup Item</h2>
+      </div>
+      <div class="card-body">
+        <form id="startup-form" class="form-grid">
+          <div class="form-group">
+            <label for="startup-name">Name</label>
+            <input id="startup-name" type="text" placeholder="My Service" required>
+          </div>
+          <div class="form-group">
+            <label for="startup-command">Command</label>
+            <input id="startup-command" type="text" placeholder="docker run -d nginx" required>
+          </div>
+          <div class="form-group">
+            <label for="startup-desc">Description</label>
+            <input id="startup-desc" type="text" placeholder="Optional description">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-accent" style="width:100%">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

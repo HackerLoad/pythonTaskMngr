@@ -1,0 +1,8 @@
+.git
+.gitattributes
+*.md
+data/
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
