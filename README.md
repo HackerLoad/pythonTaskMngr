@@ -10,7 +10,7 @@ A web-based task manager for your home server, running as a Docker container. Mo
 
 - **Overview** — Live CPU usage with 60-second sparkline, RAM/swap bars, per-disk usage, and network upload/download speed chart. Refreshes every 2 seconds.
 - **Processes** — Sortable and searchable table of all host processes (PID, name, user, CPU%, memory%, status). Refreshes every 3 seconds while active.
-- **Services** — Lists all Docker containers with their status, image, and exposed ports. Start, stop, or restart any container with one click.
+- **Services** — Two sections: all Docker containers (start/stop/restart) and all systemd services on the host (start/stop/restart), with a live search filter.
 - **Startup** — Add named commands (e.g. `docker run -d nginx`) that you want to remember to run on startup. Enable/disable or delete entries at any time. Entries are persisted across container restarts.
 
 ---
@@ -57,6 +57,7 @@ pythonTaskMngr/
     │   ├── system.py         # GET /api/system  — CPU, RAM, disk, network
     │   ├── processes.py      # GET /api/processes
     │   ├── containers.py     # GET/POST /api/containers
+    │   ├── systemd.py        # GET/POST /api/systemd
     │   └── startup.py        # CRUD /api/startup
     └── static/
         ├── index.html
@@ -84,8 +85,12 @@ The timezone defaults to `Europe/Berlin`. Change the `TZ` environment variable i
 | Mechanism | Purpose |
 |-----------|---------|
 | `pid: host` | Makes `psutil` read from the host's `/proc` so CPU, RAM, and process stats reflect the real host, not just the container. |
+| `privileged: true` | Required so `nsenter` can enter the host's mount namespace to run `systemctl` commands. |
+| `nsenter --target 1 --mount` | Enters PID 1's mount namespace inside the container, making `systemctl` talk to the host's systemd. |
 | Docker socket mount | Mounts `/var/run/docker.sock` so the Services tab can list and control other containers. |
 | `./data` volume | Persists `startup.json` so your startup items survive container rebuilds. |
+
+> **Note for macOS users:** Docker runs inside a Linux VM on macOS, so systemd services and host process stats reflect the VM, not macOS itself. On a native Linux home server everything works as expected.
 
 ---
 
@@ -97,6 +102,8 @@ The timezone defaults to `Europe/Berlin`. Change the `TZ` environment variable i
 | `GET` | `/api/processes` | All running host processes |
 | `GET` | `/api/containers` | All Docker containers |
 | `POST` | `/api/containers/{id}/{action}` | `start`, `stop`, or `restart` a container |
+| `GET` | `/api/systemd` | All systemd services on the host |
+| `POST` | `/api/systemd/{unit}/{action}` | `start`, `stop`, or `restart` a systemd unit |
 | `GET` | `/api/startup` | List startup items |
 | `POST` | `/api/startup` | Add a startup item |
 | `PUT` | `/api/startup/{id}/toggle` | Enable / disable a startup item |

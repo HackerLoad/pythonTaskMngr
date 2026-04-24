@@ -9,6 +9,7 @@ const state = {
   netRecvHistory: new Array(60).fill(0),
   processData: [],
   processSort: { key: 'cpu_percent', asc: false },
+  systemdData: [],
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -257,8 +258,13 @@ function renderProcesses() {
   `).join('') || '<tr><td colspan="6" class="empty">No processes found</td></tr>';
 }
 
-// ── Services (Docker) ─────────────────────────────────────────────────────────
+// ── Services ──────────────────────────────────────────────────────────────────
 async function refreshServices() {
+  await Promise.all([refreshContainers(), refreshSystemd()]);
+}
+
+// Docker containers
+async function refreshContainers() {
   let data;
   try {
     data = await fetch('/api/containers').then(r => r.json());
@@ -266,9 +272,9 @@ async function refreshServices() {
     return;
   }
 
-  const errEl = document.getElementById('services-error');
+  const errEl = document.getElementById('docker-error');
   if (data.error) {
-    errEl.textContent  = 'Docker: ' + data.error;
+    errEl.textContent   = 'Docker: ' + data.error;
     errEl.style.display = 'block';
   } else {
     errEl.style.display = 'none';
@@ -299,7 +305,65 @@ async function containerAction(id, action) {
   try {
     const r = await fetch(`/api/containers/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
     if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
-    await refreshServices();
+    await refreshContainers();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// Systemd services
+async function refreshSystemd() {
+  let data;
+  try {
+    data = await fetch('/api/systemd').then(r => r.json());
+  } catch {
+    return;
+  }
+
+  const errEl = document.getElementById('systemd-error');
+  if (data.error) {
+    errEl.textContent   = 'systemd: ' + data.error;
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  state.systemdData = data.services ?? [];
+  renderSystemd();
+}
+
+function renderSystemd() {
+  const search = document.getElementById('systemd-search').value.toLowerCase();
+  const filtered = state.systemdData.filter(s =>
+    s.unit.toLowerCase().includes(search) ||
+    s.description.toLowerCase().includes(search)
+  );
+
+  document.getElementById('systemd-count').textContent = `${filtered.length} services`;
+  document.getElementById('systemd-tbody').innerHTML = filtered.length
+    ? filtered.map(s => `
+      <tr>
+        <td class="mono small">${esc(s.unit)}</td>
+        <td><span class="badge badge-${esc(s.active)}">${esc(s.active)}</span></td>
+        <td class="muted small">${esc(s.sub)}</td>
+        <td class="muted">${esc(s.description)}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-sm btn-success" onclick="systemdAction('${esc(s.unit)}','start')"   ${s.active === 'active'   ? 'disabled' : ''}>Start</button>
+            <button class="btn btn-sm btn-danger"  onclick="systemdAction('${esc(s.unit)}','stop')"    ${s.active !== 'active'   ? 'disabled' : ''}>Stop</button>
+            <button class="btn btn-sm btn-warning" onclick="systemdAction('${esc(s.unit)}','restart')">Restart</button>
+          </div>
+        </td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty">No services found</td></tr>';
+}
+
+async function systemdAction(unit, action) {
+  try {
+    const r = await fetch(`/api/systemd/${encodeURIComponent(unit)}/${action}`, { method: 'POST' });
+    if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
+    await refreshSystemd();
   } catch (e) {
     alert('Error: ' + e.message);
   }
@@ -407,6 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Live search
   document.getElementById('proc-search').addEventListener('input', renderProcesses);
+  document.getElementById('systemd-search').addEventListener('input', renderSystemd);
 
   // Startup form
   document.getElementById('startup-form').addEventListener('submit', addStartupItem);

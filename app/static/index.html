@@ -128,8 +128,10 @@
 
   <!-- SERVICES -->
   <div id="services" class="tab-pane">
-    <div id="services-error" class="error-banner" style="display:none"></div>
-    <div class="table-container">
+
+    <div class="section-label">Docker Containers</div>
+    <div id="docker-error" class="error-banner" style="display:none"></div>
+    <div class="table-container" style="flex:0 1 auto;max-height:40%">
       <table class="data-table">
         <thead>
           <tr>
@@ -147,6 +149,30 @@
         </tbody>
       </table>
     </div>
+
+    <div class="section-label" style="margin-top:16px">Systemd Services</div>
+    <div id="systemd-error" class="error-banner" style="display:none"></div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <input type="text" id="systemd-search" class="search-input" placeholder="Filter services…">
+      <span id="systemd-count" class="muted"></span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Unit</th>
+            <th>Active</th>
+            <th>State</th>
+            <th>Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="systemd-tbody">
+          <tr><td colspan="5" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- STARTUP -->
